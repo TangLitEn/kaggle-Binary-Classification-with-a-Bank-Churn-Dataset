@@ -179,26 +179,140 @@ print("Female Exited ratio: ", len(Female_Exited)/len(Female))
 
 The exploratory data analysis provided valuable insights into factors influencing customer churn. Our findings highlight the importance of age, balance, product usage, and activity level, as well as geographic and gender differences. This understanding can be instrumental in developing targeted interventions to improve customer retention.
 
-### Model Building
+# Data Encoding
 
+## Encoding Non-numerical Data
 
+Machine learning models generally require numerical input, so it was necessary to encode non-numerical features. We converted categorical variables into numerical values using a basic encoding scheme.
 
-### Model Evaluation
+### Geography and Gender Encoding
 
+We mapped the 'Geography' and 'Gender' categorical variables to integers as follows:
 
+- **Geography**: France to 0, Spain to 1, Germany to 2
+- **Gender**: Male to 1, Female to 0
 
-### Final Model Selection
+Although this is not the optimal way to encode categorical data due to the introduction of artificial ordinal relationships, it serves as a straightforward initial approach.
 
+### Code Snippet for Encoding
 
+```python
+def Gender_to_Num(row):
+    if row.Gender == "Male": return 1
+    elif row.Gender == "Female": return 0
+    else: return 2 # Fallback case
 
-## Results
+train["Gender_Numerical"] = train.apply(Gender_to_Num, axis=1)
 
+def Geography_to_Num(row):
+    if row.Geography == "France": return 0
+    elif row.Geography == "Spain": return 1
+    elif row.Geography == "Germany": return 2
+    else: return 3 # Fallback case
 
+train["Geography_Numerical"] = train.apply(Geography_to_Num, axis=1)
+```
 
-## Challenges and Learnings
+### Considerations for Encoding
 
+It's important to note that using numerical encoding for categorical data might imply an ordinal relationship where none exists. For example, assigning Germany a higher number than Spain does not mean it's 'greater' in any meaningful way for our model. In future iterations, one-hot encoding or similar techniques that avoid implying an order should be considered to potentially improve model performance.
 
+# Model Selection and Training
 
-## Future Work
+## Model Selection
+
+For this project, I decided to use the Random Forest model due to its robust performance on similar datasets in past experiences. Random Forest is an ensemble learning method that can handle both classification and regression tasks well. It operates by constructing a multitude of decision trees at training time and outputting the class that is the mode of the classes of the individual trees.
+
+## Feature Consideration
+
+Before training the model, we carefully selected features based on their impact and correlation with the target variable, 'Exited'. The following features were excluded due to their little impact or correlation with the churn outcome:
+
+- `id`: A unique identifier that has no predictive power.
+- `CreditScore`: Surprisingly showed little correlation with churn.
+- `Tenure`: Had little impact on the target variable.
+- `EstimatedSalary`: Did not show significant correlation with churn.
+
+The final features used for the model are as follows:
+
+```python
+FOREST_features = ['Geography_Numerical', 'Gender_Numerical', 'Age', 'Balance', 'NumOfProducts', 'HasCrCard', 'IsActiveMember']
+FOREST_output = ['Exited']
+```
+
+## Splitting the Dataset
+
+The dataset was split into training and testing sets to evaluate the performance of the model. We used 80% of the data for training and reserved 20% for testing.
+
+### Code Snippet for Splitting the Dataset
+
+```python
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(train[FOREST_features], train[FOREST_output], test_size=0.2, random_state=42)
+```
+
+## Random Forest Training
+
+The Random Forest Classifier from `sklearn` was used for training the model. We specified the number of estimators and the maximum depth for the trees.
+
+### Code Snippet for Training the Random Forest
+
+```python
+from sklearn.ensemble import RandomForestClassifier
+
+FOREST_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=1)
+FOREST_model.fit(X_train, y_train)
+```
+
+The `n_estimators` parameter dictates the number of trees in the forest, and the `max_depth` parameter controls the maximum depth of the trees. We chose a `random_state` to ensure the reproducibility of our results.
+
+# Model Evaluation
+
+Evaluating the performance of the machine learning model is crucial to understanding its effectiveness and where it may need improvement. For this project, we used a confusion matrix to visualize the performance of our Random Forest model and calculated the F1 score as a metric.
+
+## Confusion Matrix
+
+A confusion matrix is a table that is often used to describe the performance of a classification model on a set of test data for which the true values are known. It allows easy identification of confusion between classes i.e., how often the model confused two classes.
+
+### Code Snippet for Confusion Matrix
+
+```python
+from sklearn import metrics
+
+confusion_matrix = metrics.confusion_matrix(y_test["Exited"], y_test["Predicted Exiting"])
+cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix, display_labels=[False, True])
+
+cm_display.plot()
+plt.show()
+```
+
+The confusion matrix provides insights into the number of correct and incorrect predictions made by the model, distinguished by each class.
+
+## F1 Score
+
+The F1 score is a measure of a test's accuracy and considers both the precision and the recall of the test to compute the score. The F1 score can be interpreted as a weighted average of the precision and recall, where an F1 score reaches its best value at 1 (perfect precision and recall) and worst at 0.
+
+### Code Snippet for F1 Score Calculation
+
+```python
+f1 = metrics.f1_score(y_test["Exited"], y_test["Predicted Exiting"], average="weighted")
+print(f1)
+```
+
+By using the `average="weighted"` parameter, we ensure that the F1 score takes into account the imbalance in the class distribution.
+
+## Evaluation Summary
+
+![image](https://github.com/TangLitEn/kaggle-Binary-Classification-with-a-Bank-Churn-Dataset/assets/65808174/c36b7426-888b-408a-9da1-71e4113442df)
+
+**F1 Score: 0.830002870867119**
+
+# Challenges and Learnings
+
+"While the dataset from the Kaggle Playground Series may present itself as straightforward, the true essence and excitement of data analysis lie in uncovering the narratives woven into the fabric of the data. Each dataset tells a story, and it is through rigorous exploration and diverse analytical methods that we decode these hidden tales. The journey of dissecting the dataset, interpreting its patterns, and predicting outcomes is not just about applying algorithms—it's a quest to understand the underlying phenomena that the data encapsulates. As we peel back the layers, we're granted insights into the behaviors and trends that would otherwise remain obscured. This project is not just a technical exercise; it's an investigative adventure into the heart of data storytelling." - ChatGPT4
+
+^ Good writing by ChatGPT🤣
+
+# Future Work and Improvements
 
 1. Explore on one-hot-encoding method🔥.
